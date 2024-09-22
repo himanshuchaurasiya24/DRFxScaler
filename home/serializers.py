@@ -1,10 +1,25 @@
-from .models import Person
+from .models import *
 from rest_framework import serializers
+class LoginSerializer (serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+class ColorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Color
+        fields =['color_name']
 class PersonSerializer(serializers.ModelSerializer):
+    # SERIALIZER METHOD FIELLD
+    color_info = serializers.SerializerMethodField()
+    def get_color_info(self, object):
+        color = Color.objects.get(id= object.color.id)
+        return {'color_name':color.color_name,'hex_code':'#FF0000'}
+        # return 'INDIA'
+
+    color = ColorSerializer() # this will cause the api to pass data in the api what was defined in the colorSerializer class.
     class Meta:
         model = Person
         # this will fetch all the field of the foreign key related to Person model.
-        depth = 1
+        # depth = 1
 
         # to serialize all the fields write
         fields = '__all__'
@@ -15,11 +30,11 @@ class PersonSerializer(serializers.ModelSerializer):
         # exclude = ['name', 'age'] # in this example name and age will not be serialized in the json
     # to validate the data we can write the following code
     def validate(self, data):
-        if data['age']<18:
-            raise serializers.ValidationError('Age must be greater than 18.')
         special_charecters = '!@#$%^&*()_-+=<>,./?:";\'[]|'
         if any(c in special_charecters for c in data['name']):
             raise serializers.ValidationError('Name can not contain special chars.')
+        if data['age']<18:
+            raise serializers.ValidationError('Age must be greater than 18.')
         # if data['name']
         return data
 
