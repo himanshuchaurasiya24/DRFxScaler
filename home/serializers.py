@@ -19,10 +19,12 @@ class RegisterSerializer (serializers.Serializer):
             email = validated_data['email']
             )
         user.set_password(validated_data['password'])
+        user.save()
         return validated_data
 
 class LoginSerializer (serializers.Serializer):
-    email = serializers.EmailField()
+    # email = serializers.EmailField()
+    username = serializers.CharField()
     password = serializers.CharField()
 class ColorSerializer(serializers.ModelSerializer):
     class Meta:

@@ -5,7 +5,27 @@ from home.models import Person
 from home.serializers import *
 from rest_framework import viewsets
 from rest_framework import status
-from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
+from django.contrib.auth import authenticate
+class LoginAPI(APIView):
+    def post(self, request):
+        data = request.data
+        serializer = LoginSerializer(data=data)
+        if not serializer.is_valid():
+            return Response({'status':False, 
+                             'message':serializer.errors}, 
+                             status.HTTP_400_BAD_REQUEST)
+        user = authenticate(username= serializer.data['username'], 
+                            password = serializer.data['password'])
+        if not user:
+            return Response({'status':False, 
+                             'message':'invalid credentials'}, 
+                             status.HTTP_400_BAD_REQUEST)
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({'status':True, 'message':'successful', 'token':str(token)}, status.HTTP_202_ACCEPTED)
+        
 class RegisterAPI(APIView):
     def post(self, request):
         data = request.data
@@ -19,6 +39,8 @@ class RegisterAPI(APIView):
             'status':True, 
             'message':'user created'}, status.HTTP_201_CREATED)
 class PersonViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    authentication_classes=[TokenAuthentication]
     serializer_class= PersonSerializer
     queryset= Person.objects.all()
     # to define search finctionality here...
@@ -31,6 +53,8 @@ class PersonViewSet(viewsets.ModelViewSet):
         return Response({'status':status.HTTP_200_OK, 'data':serializer.data})
 
 class PersonAPI(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes=[TokenAuthentication]
     def get(self, request):
         objects = Person.objects.filter(color__isnull= False)
         # here many= True means that the data being passed as an object has length of more than one.
