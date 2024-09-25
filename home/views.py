@@ -5,10 +5,12 @@ from home.models import Person
 from home.serializers import *
 from rest_framework import viewsets
 from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from django.contrib.auth import authenticate
+from django.core.paginator import Paginator
 class LoginAPI(APIView):
     def post(self, request):
         data = request.data
@@ -51,16 +53,31 @@ class PersonViewSet(viewsets.ModelViewSet):
             queryset= queryset.filter(name__contains= search)
         serializer = PersonSerializer(queryset, many = True)
         return Response({'status':status.HTTP_200_OK, 'data':serializer.data})
+    @action(detail=False , methods=['post'])
+    def send_email_to_person(self, request):
+        return Response({
+            'status':True,'message':'email sent succesfully'
+        })
+    
 
 class PersonAPI(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes=[TokenAuthentication]
     def get(self, request):
-        objects = Person.objects.filter(color__isnull= False)
-        # here many= True means that the data being passed as an object has length of more than one.
-        serializer = PersonSerializer(objects, many = True)
-        return Response(serializer.data)
-        # return Response({'message':'this is a get method'})
+        try:
+        # objects = Person.objects.filter(color__isnull= False)
+            objects = Person.objects.filter()
+            # THIS WILL GIVE DATA IN DEFINED NUMBER TO REDUCE SERVER LOAD
+            # HERE IN THIS CASE IT WILL ONLY GIVE 5 DATA AT A TIME. 
+            page = request.GET.get('page',1)
+            page_size = 5
+            paginator = Paginator(objects, page_size)
+            # here many= True means that the data being passed as an object has length of more than one.
+            serializer = PersonSerializer(paginator.page(page), many = True)
+            return Response(serializer.data)
+            # return Response({'message':'this is a get method'})
+        except Exception as e:
+            return Response({'status':False, 'message':'Invalid page number'}, status.HTTP_204_NO_CONTENT)
     def post(self, request):
         data = request.data
         # to check the validity of the data from the post method
