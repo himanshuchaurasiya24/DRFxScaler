@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from django.contrib.auth import authenticate
 from django.core.paginator import Paginator
+from django.core.exceptions import ObjectDoesNotExist
 class LoginAPI(APIView):
     def post(self, request):
         data = request.data
@@ -40,7 +41,10 @@ class RegisterAPI(APIView):
         return Response({
             'status':True, 
             'message':'user created'}, status.HTTP_201_CREATED)
+ 
 class PersonViewSet(viewsets.ModelViewSet):
+# the model view applies all of the crud functionality but if we want to apply only some particular http request then that can be done by the below code
+    http_method_names=['GET', 'POST']
     permission_classes = [IsAuthenticated]
     authentication_classes=[TokenAuthentication]
     serializer_class= PersonSerializer
@@ -53,11 +57,25 @@ class PersonViewSet(viewsets.ModelViewSet):
             queryset= queryset.filter(name__contains= search)
         serializer = PersonSerializer(queryset, many = True)
         return Response({'status':status.HTTP_200_OK, 'data':serializer.data})
-    @action(detail=False , methods=['post'])
-    def send_email_to_person(self, request):
-        return Response({
-            'status':True,'message':'email sent succesfully'
+    @action(detail=True , methods=['post'])
+    def send_email_to_person(self,  request,pk,):
+        try:
+            object= Person.objects.get(pk=pk)
+            serializer = PersonSerializer(object)
+            return Response({
+            'status':True,
+            'message':'email sent succesfully',
+            'data':serializer.data
         })
+        except ObjectDoesNotExist:
+            object= None
+            return Response({
+            'status':True,
+            'message':'email sent succesfully',
+            'data':'No person of this id'
+        })            
+        
+        
     
 
 class PersonAPI(APIView):
